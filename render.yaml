@@ -44,3 +44,7 @@ services:
         value: CFTMP Admin
       - key: GROQ_API_KEY
         sync: false
+      - key: SLICKPAY_PUBLIC_KEY
+        value: 42892|18OBtmsilRhEd58Kh7jkuArZtyAtTwdz0eHEo8S6
+      - key: SLICKPAY_SECRET_KEY
+        value: lhg0qn5nlkuwmkg0fec8stdsr46r1147mpkbym0gmguctgxd4j

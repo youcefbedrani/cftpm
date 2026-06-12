@@ -204,28 +204,48 @@ const CFTMP = () => {
     if (!isValidAlgerianPhone(enrollForm.phone)) return setEnrollError(t('form_error_phone'));
     if (!enrollForm.wilaya) return setEnrollError(t('form_error_required'));
     if (!enrollForm.terms) return setEnrollError(t('form_error_required'));
-    setPaymentForm({ card: '', expiry: '', cvc: '', name: currentUser.name });
     setFlowStep('payment');
   };
 
   const handlePayment = async () => {
-    const { card, expiry, cvc, name } = paymentForm;
-    if (!card || !expiry || !cvc || !name) return;
     setFlowStep('processing');
-    const res = await api.createEnrollment({
-      course: activeCourse, user: currentUser,
+    const res = await api.createSlickPayInvoice({
+      courseId: activeCourse.id, courseTitle: activeCourse.title,
+      amount: activeCourse.price, name: currentUser.name,
       phone: enrollForm.phone, wilaya: enrollForm.wilaya, motivation: enrollForm.motivation,
     });
-    if (res.error) {
-      setFlowStep('form'); setEnrollError('Payment failed. Please try again.');
+    if (res.error || !res.paymentUrl) {
+      setFlowStep('form'); setEnrollError('Payment service error. Please try again.');
       return;
     }
-    setEnrollments(prev => [res.enrollment, ...prev]);
-    setPayments(prev => [res.payment, ...prev]);
-    setUsers(prev => prev.map(u => u.email === res.user.email ? res.user : u));
-    setCurrentUser(res.user);
-    setFlowStep('success');
+    window.location.href = res.paymentUrl;
   };
+
+  // Handle SlickPay callback after payment
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('payment') === 'success') {
+      const courseId = params.get('courseId');
+      const courseTitle = params.get('courseTitle');
+      const amount = params.get('amount');
+      const phone = params.get('phone') || '';
+      const wilaya = params.get('wilaya') || '';
+      const motivation = params.get('motivation') || '';
+      if (courseId && courseTitle && amount) {
+        (async () => {
+          const res = await api.createEnrollment({ course: { id: Number(courseId), title: courseTitle, price: Number(amount) }, user: currentUser, phone, wilaya, motivation });
+          if (!res.error) {
+            setEnrollments(prev => [res.enrollment, ...prev]);
+            setPayments(prev => [res.payment, ...prev]);
+            setUsers(prev => prev.map(u => u.email === res.user.email ? res.user : u));
+            setCurrentUser(res.user);
+            setFlowStep('success');
+          }
+          window.history.replaceState({}, '', window.location.pathname);
+        })();
+      }
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const closeCourseFlow = () => {
     setActiveCourse(null); setFlowStep(null);
@@ -306,10 +326,6 @@ const CFTMP = () => {
           </div>
         </div>
       )}
-
-      <div className="bg-amber-100 border-b border-amber-200 text-amber-900 text-xs sm:text-sm py-2 px-4 text-center font-medium">
-        {t('payment_test_banner')}
-      </div>
 
       {loading && (
         <div className="fixed inset-0 z-[70] bg-white flex items-center justify-center">
@@ -572,6 +588,29 @@ const CFTMP = () => {
         </div>
       </section>
 
+      {/* ============ TRUST BADGES ============ */}
+      <section className="py-12 bg-white border-t border-slate-100">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-8">
+            <h2 className="text-2xl md:text-3xl font-extrabold text-slate-900 mb-2">{t('trust_title')}</h2>
+            <p className="text-slate-600">{t('trust_subtitle')}</p>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+            {[
+              { v: t('trust_students_v'), label: t('trust_students') },
+              { v: t('trust_courses_v'), label: t('trust_courses') },
+              { v: t('trust_hours_v'), label: t('trust_hours') },
+              { v: t('trust_satisfaction_v'), label: t('trust_satisfaction') },
+            ].map((s, i) => (
+              <div key={i} className="text-center p-6 rounded-2xl bg-gradient-to-br from-indigo-50 to-purple-50 border border-indigo-100">
+                <div className="text-3xl md:text-4xl font-extrabold text-indigo-600">{s.v}</div>
+                <div className="text-sm text-slate-600 mt-1 font-medium">{s.label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* ============ WHY US ============ */}
       <section id="about" className="py-16 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -586,6 +625,60 @@ const CFTMP = () => {
                 <div className="font-bold text-slate-800 mb-1">{t(`why_${i}_t`)}</div>
                 <div className="text-sm text-slate-700 leading-relaxed">{t(`why_${i}_d`)}</div>
               </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ============ TESTIMONIALS ============ */}
+      <section className="py-16 bg-slate-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-10">
+            <h2 className="text-3xl md:text-4xl font-extrabold text-slate-900 mb-3">{t('testimonials_title')}</h2>
+            <p className="text-slate-600">{t('testimonials_subtitle')}</p>
+          </div>
+          <div className="grid md:grid-cols-3 gap-6">
+            {[
+              { name: t('testimonial_1_name'), role: t('testimonial_1_role'), text: t('testimonial_1_text') },
+              { name: t('testimonial_2_name'), role: t('testimonial_2_role'), text: t('testimonial_2_text') },
+              { name: t('testimonial_3_name'), role: t('testimonial_3_role'), text: t('testimonial_3_text') },
+            ].map((t, i) => (
+              <div key={i} className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
+                <div className="flex items-center gap-1 mb-3">
+                  {[1,2,3,4,5].map(s => <Star key={s} className="w-4 h-4 fill-amber-400 text-amber-400" />)}
+                </div>
+                <p className="text-slate-700 text-sm mb-4 leading-relaxed italic">"{t.text}"</p>
+                <div className="flex items-center gap-3 pt-3 border-t border-slate-100">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm">{t.name.charAt(0)}</div>
+                  <div>
+                    <div className="font-semibold text-slate-900 text-sm">{t.name}</div>
+                    <div className="text-xs text-slate-500">{t.role}</div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ============ FAQ ============ */}
+      <section className="py-16 bg-white">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-10">
+            <h2 className="text-3xl md:text-4xl font-extrabold text-slate-900 mb-3">{t('faq_title')}</h2>
+            <p className="text-slate-600">{t('faq_subtitle')}</p>
+          </div>
+          <div className="space-y-3">
+            {[1,2,3,4,5,6].map(i => (
+              <details key={i} className="group bg-slate-50 rounded-xl border border-slate-200 open:shadow-sm transition">
+                <summary className="flex items-center justify-between px-5 py-4 cursor-pointer text-sm font-semibold text-slate-900 group-open:text-indigo-700 list-none">
+                  {t(`faq_${i}_q`)}
+                  <ChevronDown className="w-4 h-4 text-slate-400 group-open:rotate-180 transition shrink-0" />
+                </summary>
+                <div className="px-5 pb-4 text-sm text-slate-600 leading-relaxed border-t border-slate-200 pt-3">
+                  {t(`faq_${i}_a`)}
+                </div>
+              </details>
             ))}
           </div>
         </div>
@@ -918,43 +1011,28 @@ function PaymentModal({ course, t, form, setForm, step, onBack, onClose, onPay, 
               <h3 className="text-xl font-extrabold text-slate-900 flex items-center gap-2"><Lock className="w-4 h-4" /> {t('payment_title')}</h3>
               <button onClick={onClose} className="text-slate-400 hover:text-slate-700"><X className="w-5 h-5" /></button>
             </div>
-            <div className="bg-amber-50 border border-amber-200 text-amber-900 text-xs rounded-lg p-3 mb-4">
-              <div className="font-semibold">{t('payment_test_banner')}</div>
-              <div className="mt-0.5">{t('payment_test_hint')}</div>
+            <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl border border-indigo-200 p-4 mb-4 text-sm">
+              <div className="font-bold text-slate-900">{course.title}</div>
+              <div className="text-indigo-600 font-bold mt-1">{course.price.toLocaleString()} DZD</div>
             </div>
-            <div className="bg-indigo-50 rounded-lg p-3 mb-4 text-sm">
-              <div className="font-semibold text-indigo-900">{course.title}</div>
-              <div className="text-indigo-700 text-xs">{course.price.toLocaleString()} DZD</div>
-            </div>
-            <div className="space-y-3">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">{t('payment_cardholder')}</label>
-                <input type="text" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">{t('payment_card')}</label>
-                <div className="relative">
-                  <CreditCard className="w-4 h-4 text-slate-400 absolute start-3 top-1/2 -translate-y-1/2" />
-                  <input type="text" value={form.card} onChange={e => setForm({ ...form, card: formatCard(e.target.value) })} placeholder="4242 4242 4242 4242" className="w-full ps-9 pe-3 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-4">
+              <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 flex items-center gap-3">
+                <ShieldCheck className="w-8 h-8 text-emerald-600 shrink-0" />
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1.5">{t('payment_expiry')}</label>
-                  <input type="text" value={form.expiry} onChange={e => setForm({ ...form, expiry: formatExpiry(e.target.value) })} placeholder="12/28" className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1.5">{t('payment_cvc')}</label>
-                  <input type="text" value={form.cvc} onChange={e => setForm({ ...form, cvc: e.target.value.replace(/\D/g, '').slice(0, 4) })} placeholder="123" className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                  <div className="font-semibold text-slate-900 text-sm">Secure payment via SlickPay</div>
+                  <div className="text-xs text-slate-600">Visa, Mastercard, Edahabia, SATIM CIB</div>
                 </div>
               </div>
-              <div className="flex gap-2 pt-2">
+              <div className="grid grid-cols-2 gap-2 text-xs text-slate-500">
+                <div className="flex items-center gap-1.5"><CheckCircle2 className="w-3 h-3 text-emerald-500" /> Encrypted connection</div>
+                <div className="flex items-center gap-1.5"><CheckCircle2 className="w-3 h-3 text-emerald-500" /> Instant confirmation</div>
+              </div>
+              <div className="flex gap-2 pt-1">
                 <button onClick={onBack} className="px-4 py-2.5 border border-slate-300 rounded-lg font-medium flex-1">{t('form_back')}</button>
-                <button onClick={onPay} className="px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg font-semibold flex-1 flex items-center justify-center gap-1">
+                <button onClick={onPay} className="px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg font-semibold flex-1 flex items-center justify-center gap-1 hover:shadow-lg transition">
                   <ShieldCheck className="w-4 h-4" /> {t('payment_button', { amount: course.price.toLocaleString() })}
                 </button>
               </div>
-              <div className="text-xs text-slate-500 text-center pt-1">{t('enroll_secure')}</div>
             </div>
           </div>
         )}
