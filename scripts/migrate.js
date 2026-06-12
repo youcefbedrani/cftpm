@@ -13,7 +13,10 @@ const { Client } = require('pg');
     process.exit(1);
   }
   const sql = fs.readFileSync(path.join(__dirname, '..', 'sql_migration.sql'), 'utf8');
-  const client = new Client({ connectionString: url });
+  const ssl = process.env.DATABASE_USE_SSL === 'true'
+    ? { rejectUnauthorized: true }
+    : false;
+  const client = new Client({ connectionString: url, ssl });
   try {
     await client.connect();
     console.log('Running migration...');

@@ -1,11 +1,3 @@
-// === ADMIN CREDENTIALS ===
-// Change these before deploying to production. Never store passwords in client code in real apps.
-export const ADMIN_CREDENTIALS = {
-  email: 'admin@cftmp.com',
-  password: 'Admin@2026',
-  name: 'CFTMP Admin'
-};
-
 export const WILAYAS = [
   'Adrar','Chlef','Laghouat','Oum El Bouaghi','Batna','Béjaïa','Biskra','Béchar','Blida','Bouira',
   'Tamanrasset','Tébessa','Tlemcen','Tiaret','Tizi Ouzou','Alger','Djelfa','Jijel','Sétif','Saïda',

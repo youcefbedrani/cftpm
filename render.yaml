@@ -1,0 +1,46 @@
+# ============================================================================
+# Render Blueprint — one-click deploy on Render.com
+#
+# Steps:
+#   1. Push this repo to GitHub/GitLab
+#   2. In Render Dashboard → Blueprint → connect your repo
+#   3. During setup, fill in the secret env vars (marked "sync: false" below)
+#   4. Deploy — Render will build, run migrations, and start the app
+#
+# Database: Supabase (free tier)
+#   - Create a project at https://supabase.com
+#   - Go to Project Settings → Database → Connection string (URI)
+#   - Copy the URI and set it as DATABASE_URL in Render's env vars
+#   - Note: Supabase uses `postgresql://` prefix — that's fine, pg accepts it
+#
+# Free tier note: Render free web services spin down after 15 min of inactivity
+# and wake up on the next request (may take 30-60s). Upgrade to a paid plan
+# for zero downtime.
+# ============================================================================
+
+services:
+  - type: web
+    name: cftmp
+    env: node
+    region: frankfurt
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npx next start -p $PORT
+    preDeployCommand: npm run db:migrate && npm run db:seed
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: AUTH_SECRET
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: ADMIN_EMAIL
+        value: admin@cftmp.com
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: ADMIN_NAME
+        value: CFTMP Admin
+      - key: DATABASE_USE_SSL
+        value: "true"

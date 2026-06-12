@@ -19,7 +19,10 @@ const bcrypt = require('bcryptjs');
     process.exit(1);
   }
 
-  const client = new Client({ connectionString: url });
+  const ssl = process.env.DATABASE_USE_SSL === 'true'
+    ? { rejectUnauthorized: true }
+    : false;
+  const client = new Client({ connectionString: url, ssl });
   await client.connect();
   try {
     const hash = await bcrypt.hash(pass, 10);
