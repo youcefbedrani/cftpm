@@ -8,9 +8,10 @@ import { p2app, e2app, pay2app } from '@/lib/rowMaps';
 export const POST = withAuth(async (req, { session }) => {
   const { courseId, courseTitle, amount, phone = '', wilaya = '', motivation = '' } = await req.json();
   if (!courseId || !courseTitle || !amount) return bad('missing fields');
-  if (!pool) return bad('Database not configured', 500);
+  const db = await pool;
+  if (!db) return bad('Database not configured', 500);
 
-  const client = await pool.connect();
+  const client = await db.connect();
   try {
     await client.query('BEGIN');
     const me = (await client.query('SELECT * FROM profiles WHERE email = $1', [session.email])).rows[0];
