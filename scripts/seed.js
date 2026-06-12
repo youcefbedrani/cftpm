@@ -34,7 +34,7 @@ const ACCOUNTS = [
   }
 
   const ssl = process.env.DATABASE_USE_SSL === 'true'
-    ? { rejectUnauthorized: true }
+    ? { rejectUnauthorized: false }
     : false;
   const client = new Client({ connectionString: url, ssl });
   await client.connect();

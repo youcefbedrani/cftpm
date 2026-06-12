@@ -14,7 +14,7 @@ const { Client } = require('pg');
   }
   const sql = fs.readFileSync(path.join(__dirname, '..', 'sql_migration.sql'), 'utf8');
   const ssl = process.env.DATABASE_USE_SSL === 'true'
-    ? { rejectUnauthorized: true }
+    ? { rejectUnauthorized: false }
     : false;
   const client = new Client({ connectionString: url, ssl });
   try {
